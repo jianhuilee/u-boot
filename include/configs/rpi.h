@@ -183,10 +183,40 @@
 	BOOT_TARGET_PXE(func) \
 	BOOT_TARGET_DHCP(func)
 
+#define CONFIG_BOOTCOMMAND \
+	"if mmc rescan; then " \
+		"if run loadbootenv; then " \
+			"echo Loaded env from ${bootenvfile};" \
+			"run importbootenv; " \
+			"if test -n $uenvcmd; then " \
+				"echo Running uenvcmd...;" \
+				"run uenvcmd;" \
+			"fi;" \
+		"fi;" \
+		"if run loadbootscr; then " \
+			"echo Running boot.scr...;" \
+			"run bootscript; " \
+		"fi;" \
+	"fi; "\
+	"echo Running mmc booting...;" \
+	"run mmcboot; " \
+
 #include <config_distro_bootcmd.h>
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
+	"bootenvfile=uEnv.txt\0" \
+	"loadbootenv=fatload mmc 0 ${loadaddr} ${bootenvfile}\0" \
+	"importbootenv=echo Importing environment...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+	"loadbootscr=fatload mmc 0 ${bootscraddr} boot.scr\0" \
+	"bootscript=source ${bootscraddr}\0" \
 	"dhcpuboot=usb start; dhcp u-boot.uimg; bootm\0" \
+    "mmcargs=setenv bootargs earlyprintk dwc_otg.lpm_enable=0 " \
+        "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 " \
+        "elevator=deadline fsck.repair=yes rootwait\0" \
+    "mmcboot=run mmcargs; fatload mmc 0:1 ${kernel_addr_r} kernel7.img; " \
+        "fatload mmc 0:1 ${fdt_addr_r} bcm2709-rpi-2-b.dtb; " \
+        "bootz ${kernel_addr_r} - ${fdt_addr_r}\0" \
 	ENV_DEVICE_SETTINGS \
 	ENV_MEM_LAYOUT_SETTINGS \
 	BOOTENV
